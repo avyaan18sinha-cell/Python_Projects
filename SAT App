@@ -1,0 +1,1004 @@
+#!/usr/bin/env python3
+"""
+SAT Prep Pro  —  Desktop GUI App
+Run:  python3 sat_app.py
+Deps: pip install pygame
+"""
+import pygame, sys, math, time, random, textwrap
+
+pygame.init()
+pygame.font.init()
+
+WIN_W, WIN_H = 1340, 860
+screen = pygame.display.set_mode((WIN_W, WIN_H), pygame.RESIZABLE)
+pygame.display.set_caption("SAT Prep Pro")
+clock = pygame.time.Clock()
+
+# ── PALETTE ──────────────────────────────────────────────────────────────────
+BG        = ( 11,  15,  21)
+SIDE_BG   = ( 18,  23,  32)
+CARD      = ( 26,  33,  45)
+CARD_HOV  = ( 36,  46,  62)
+BORDER    = ( 44,  52,  64)
+BORDER_LT = ( 68,  80,  96)
+TEXT1     = (228, 236, 244)
+TEXT2     = (134, 144, 158)
+TEXT3     = ( 68,  78,  92)
+ACCENT    = ( 79, 172, 254)
+TEAL      = ( 45, 212, 191)
+PURPLE    = (163, 113, 247)
+ORANGE    = (251, 146,  60)
+GREEN_C   = ( 63, 185, 119)
+GREEN_BG  = ( 16,  44,  28)
+RED_C     = (248,  81,  73)
+RED_BG    = ( 50,  16,  16)
+YELLOW    = (255, 202,  58)
+YELLOW_BG = ( 50,  42,   8)
+PURPLE_BG = ( 36,  22,  66)
+SCROLLBAR = ( 60,  70,  88)
+WHITE     = (255, 255, 255)
+BG2       = ( 14,  19,  28)
+
+TOPIC_COLOR = {"algebra1":ACCENT,"geometry":TEAL,"algebra2":PURPLE,"english":ORANGE}
+TOPIC_ICON  = {"algebra1":"∑","geometry":"△","algebra2":"∫","english":"✎"}
+TOPIC_LABEL = {"algebra1":"Algebra I","geometry":"Geometry","algebra2":"Algebra II","english":"English"}
+TOPIC_DESC  = {
+    "algebra1":"Linear equations, slope, functions & inequalities",
+    "geometry":"Triangles, circles, volume & coordinate geometry",
+    "algebra2":"Quadratics, logs, exponentials & complex numbers",
+    "english":"Grammar, vocabulary, literary devices & essay writing",
+}
+SIDEBAR_W = 226
+
+# ── FONTS ─────────────────────────────────────────────────────────────────────
+def font(size, bold=False):
+    for name in ["Segoe UI","SF Pro Display","Helvetica Neue","Arial"]:
+        p = pygame.font.match_font(name, bold=bold)
+        if p: return pygame.font.Font(p, size)
+    return pygame.font.SysFont("Arial", size, bold=bold)
+
+Fb  = font(34,True); Fh1=font(22,True); Fh2=font(18,True); Fh3=font(14,True)
+Fb2 = font(13);      Fsm=font(12);      Fxs=font(11);      Fnu=font(26,True)
+Fmd = font(16,True)
+
+# ── 160 QUESTIONS (40 per topic) ──────────────────────────────────────────────
+QUESTIONS = {
+
+"algebra1": [
+  {"q":"Solve: 3x + 7 = 22","ch":["x=3","x=4","x=5","x=6"],"ans":2,"exp":"3x=15 → x=5","tag":"Linear Equations"},
+  {"q":"Slope of 2y − 6x = 10?","ch":["2","3","5","−3"],"ans":1,"exp":"y=3x+5, slope=3","tag":"Slope"},
+  {"q":"Factor: x² − 9","ch":["(x−3)²","(x+3)(x−3)","(x+9)(x−1)","Prime"],"ans":1,"exp":"Diff of squares","tag":"Factoring"},
+  {"q":"Solve: 2x − 4 > 10","ch":["x>3","x>5","x>7","x>6"],"ans":2,"exp":"2x>14 → x>7","tag":"Inequalities"},
+  {"q":"y-intercept through (2,5) and (4,9)?","ch":["1","3","5","7"],"ans":0,"exp":"slope=2, b=1","tag":"Linear Functions"},
+  {"q":"Simplify: 3(2x−4)+5x","ch":["11x−12","11x−4","6x−12","11x+12"],"ans":0,"exp":"6x−12+5x=11x−12","tag":"Expressions"},
+  {"q":"f(x)=2x²−3x+1. Find f(3).","ch":["8","10","12","14"],"ans":1,"exp":"18−9+1=10","tag":"Functions"},
+  {"q":"Solve: |x−3|=5","ch":["{8}","{−2,8}","{2,8}","{−8,2}"],"ans":1,"exp":"x=8 or x=−2","tag":"Absolute Value"},
+  {"q":"Trains 300 mi apart at 60 & 90 mph. Hours to meet?","ch":["1","2","3","4"],"ans":1,"exp":"300/150=2","tag":"Word Problems"},
+  {"q":"Line: slope 3 through (0,−2)?","ch":["y=3x+2","y=3x−2","y=−2x+3","y=2x−3"],"ans":1,"exp":"y=3x−2","tag":"Slope-Intercept"},
+  {"q":"Solve: 5x − 3 = 2x + 9","ch":["x=2","x=3","x=4","x=5"],"ans":2,"exp":"3x=12 → x=4","tag":"Linear Equations"},
+  {"q":"Which is a function? {(1,2),(2,3),(2,4),(3,5)}","ch":["Yes","No","Cannot tell","Depends on domain"],"ans":1,"exp":"x=2 maps to 2 values — not a function","tag":"Functions"},
+  {"q":"Solve: x/4 + 3 = 7","ch":["x=8","x=10","x=14","x=16"],"ans":3,"exp":"x/4=4 → x=16","tag":"Linear Equations"},
+  {"q":"What is the x-intercept of y=2x−8?","ch":["(0,−8)","(4,0)","(8,0)","(−4,0)"],"ans":1,"exp":"0=2x−8 → x=4","tag":"Intercepts"},
+  {"q":"Simplify: (3x²)(4x³)","ch":["7x⁵","12x⁵","12x⁶","7x⁶"],"ans":1,"exp":"3·4=12, x²·x³=x⁵","tag":"Exponents"},
+  {"q":"Solve the system: x+y=10, x−y=4","ch":["(6,4)","(7,3)","(8,2)","(5,5)"],"ans":1,"exp":"Add: 2x=14→x=7,y=3","tag":"Systems"},
+  {"q":"Rate of change from (1,3) to (4,12)?","ch":["2","3","4","5"],"ans":1,"exp":"(12−3)/(4−1)=3","tag":"Slope"},
+  {"q":"Expand: (x+4)(x−2)","ch":["x²+2x−8","x²−2x−8","x²+6x−8","x²−6x+8"],"ans":0,"exp":"x²−2x+4x−8=x²+2x−8","tag":"FOIL"},
+  {"q":"Solve: 2(x+3)=14","ch":["x=3","x=4","x=5","x=6"],"ans":2,"exp":"x+3=7 → x=4... wait: 2x+6=14→2x=8→x=4","tag":"Linear Equations"},
+  {"q":"Which inequality is graphed as a dashed line?","ch":["y≤2x","y=2x","y<2x","y≥2x"],"ans":2,"exp":"Strict inequalities (<,>) use dashed lines","tag":"Inequalities"},
+  {"q":"Solve: 3x/5 = 9","ch":["x=10","x=12","x=15","x=18"],"ans":2,"exp":"3x=45 → x=15","tag":"Linear Equations"},
+  {"q":"Slope of a horizontal line?","ch":["Undefined","0","1","−1"],"ans":1,"exp":"Horizontal lines have slope=0","tag":"Slope"},
+  {"q":"f(x)=5x−3. Find f(−2).","ch":["−13","−7","7","13"],"ans":0,"exp":"5(−2)−3=−10−3=−13","tag":"Functions"},
+  {"q":"Solve: |2x+1|=7","ch":["x=3,−4","x=4,−3","x=3,−3","x=4,−4"],"ans":0,"exp":"2x+1=7→x=3; 2x+1=−7→x=−4","tag":"Absolute Value"},
+  {"q":"Which point is on y=−3x+6?","ch":["(1,3)","(2,0)","(0,−3)","(3,3)"],"ans":1,"exp":"y=−3(2)+6=0 ✓","tag":"Linear Functions"},
+  {"q":"Solve: 4(2x−1)=3(x+5)","ch":["x=3","x=4","x=19/5","x=19/3"],"ans":2,"exp":"8x−4=3x+15 → 5x=19 → x=19/5","tag":"Linear Equations"},
+  {"q":"Find the domain of f(x)=1/(x−3).","ch":["All reals","x≠3","x>3","x≥3"],"ans":1,"exp":"Denominator ≠ 0, so x≠3","tag":"Functions"},
+  {"q":"Solve: 7 − 2x = x − 8","ch":["x=3","x=4","x=5","x=6"],"ans":2,"exp":"15=3x → x=5","tag":"Linear Equations"},
+  {"q":"Which represents direct variation?","ch":["y=x+3","y=3x","y=3/x","y=x²"],"ans":1,"exp":"Direct variation: y=kx","tag":"Proportions"},
+  {"q":"Solve the system: 2x+3y=12, x=3","ch":["(3,2)","(3,3)","(3,4)","(3,6)"],"ans":0,"exp":"2(3)+3y=12 → 3y=6 → y=2","tag":"Systems"},
+  {"q":"Solve: (x−2)(x+5)=0","ch":["x=2,5","x=−2,5","x=2,−5","x=−2,−5"],"ans":2,"exp":"x−2=0 or x+5=0 → x=2 or x=−5","tag":"Factoring"},
+  {"q":"Evaluate: 3² + 4²","ch":["25","30","35","49"],"ans":0,"exp":"9+16=25","tag":"Exponents"},
+  {"q":"What is the range of f(x)=x²?","ch":["All reals","x≥0","y≥0","y>0"],"ans":2,"exp":"x² is always ≥0, so range is y≥0","tag":"Functions"},
+  {"q":"Solve: x−(3−x)=9","ch":["x=4","x=5","x=6","x=7"],"ans":2,"exp":"x−3+x=9 → 2x=12 → x=6","tag":"Linear Equations"},
+  {"q":"Two numbers sum to 50; one is 3 times the other. Larger number?","ch":["25","30","35","37.5"],"ans":3,"exp":"x+3x=50 → x=12.5 → 3x=37.5","tag":"Word Problems"},
+  {"q":"Simplify: (2x³)²","ch":["4x⁵","4x⁶","2x⁶","8x⁶"],"ans":1,"exp":"2²=4, (x³)²=x⁶ → 4x⁶","tag":"Exponents"},
+  {"q":"Solve: 6x+2=4x+10","ch":["x=2","x=3","x=4","x=5"],"ans":2,"exp":"2x=8 → x=4","tag":"Linear Equations"},
+  {"q":"Line perpendicular to y=2x+1 has slope:","ch":["2","−2","1/2","−1/2"],"ans":3,"exp":"Perpendicular slope = −1/m = −1/2","tag":"Slope"},
+  {"q":"Which is NOT a linear equation?","ch":["y=3x","2x+y=5","y=x²","x=4"],"ans":2,"exp":"x² makes it quadratic, not linear","tag":"Linear Equations"},
+  {"q":"Solve: 3(x−4)=2(x+1)","ch":["x=10","x=12","x=14","x=16"],"ans":2,"exp":"3x−12=2x+2 → x=14","tag":"Linear Equations"},
+],
+
+"geometry": [
+  {"q":"Right triangle legs 6,8. Hypotenuse?","ch":["10","12","14","9"],"ans":0,"exp":"√(36+64)=10","tag":"Pythagorean Theorem"},
+  {"q":"Triangle interior angles sum to:","ch":["90°","180°","270°","360°"],"ans":1,"exp":"Always 180°","tag":"Triangles"},
+  {"q":"Circle r=7. Area? (π≈3.14)","ch":["43.98","153.86","21.98","49"],"ans":1,"exp":"πr²≈153.86","tag":"Circles"},
+  {"q":"Rectangle 12×5. Diagonal?","ch":["11","13","15","17"],"ans":1,"exp":"√(144+25)=13","tag":"Rectangles"},
+  {"q":"Cylinder r=3,h=10. Volume? (π≈3.14)","ch":["282.6","94.2","188.4","301.6"],"ans":0,"exp":"πr²h=282.6","tag":"Volume"},
+  {"q":"Midpoint of (2,4) and (8,10)?","ch":["(5,7)","(4,6)","(6,8)","(3,5)"],"ans":0,"exp":"((2+8)/2,(4+10)/2)=(5,7)","tag":"Coordinate Geometry"},
+  {"q":"Square perimeter=48. Area?","ch":["96","112","144","24"],"ans":2,"exp":"Side=12, Area=144","tag":"Squares"},
+  {"q":"30-60-90, short leg=5. Hypotenuse?","ch":["5√2","10","5√3","15"],"ans":1,"exp":"Hyp=2×short leg=10","tag":"Special Triangles"},
+  {"q":"Exterior angle of triangle equals:","ch":["Adjacent interior","Sum of 2 remote interior angles","90°","Half of all interior"],"ans":1,"exp":"Exterior Angle Theorem","tag":"Angle Theorems"},
+  {"q":"Corresponding angles (parallel+transversal) are:","ch":["Supplementary","Complementary","Congruent","Vertical"],"ans":2,"exp":"Always equal","tag":"Parallel Lines"},
+  {"q":"Area of triangle base=10, height=6?","ch":["30","60","16","20"],"ans":0,"exp":"½×10×6=30","tag":"Triangles"},
+  {"q":"Circle circumference r=5? (π≈3.14)","ch":["15.7","31.4","78.5","10"],"ans":1,"exp":"2πr=2×3.14×5=31.4","tag":"Circles"},
+  {"q":"Supplementary angles sum to:","ch":["90°","180°","270°","360°"],"ans":1,"exp":"Supplementary=180°","tag":"Angles"},
+  {"q":"Distance from (1,2) to (4,6)?","ch":["5","7","3","4"],"ans":0,"exp":"√(9+16)=√25=5","tag":"Coordinate Geometry"},
+  {"q":"Volume of cube, side=4?","ch":["16","48","64","96"],"ans":2,"exp":"4³=64","tag":"Volume"},
+  {"q":"45-45-90, leg=6. Hypotenuse?","ch":["6","6√2","12","6√3"],"ans":1,"exp":"Hyp=leg×√2=6√2","tag":"Special Triangles"},
+  {"q":"Area of trapezoid: b₁=6, b₂=10, h=4?","ch":["32","24","16","40"],"ans":0,"exp":"½(6+10)×4=32","tag":"Quadrilaterals"},
+  {"q":"Two angles are vertical. One is 65°. Other?","ch":["25°","115°","65°","180°"],"ans":2,"exp":"Vertical angles are equal","tag":"Angles"},
+  {"q":"Polygon with 5 sides is called:","ch":["Quadrilateral","Pentagon","Hexagon","Octagon"],"ans":1,"exp":"5 sides = Pentagon","tag":"Polygons"},
+  {"q":"Interior angle sum of hexagon?","ch":["360°","540°","720°","900°"],"ans":2,"exp":"(n−2)×180=(6−2)×180=720°","tag":"Polygons"},
+  {"q":"Circle area=25π. Radius?","ch":["5","10","25","√25"],"ans":0,"exp":"πr²=25π → r=5","tag":"Circles"},
+  {"q":"Rhombus diagonals d₁=8, d₂=6. Area?","ch":["24","48","14","28"],"ans":0,"exp":"½×d₁×d₂=½×8×6=24","tag":"Quadrilaterals"},
+  {"q":"Similar triangles sides 3,4,5 and 6,?,?. Middle side?","ch":["6","8","10","12"],"ans":1,"exp":"Scale factor=2 → 4×2=8","tag":"Similar Triangles"},
+  {"q":"Legs of 45-45-90 triangle, hypotenuse=10. Leg?","ch":["5","5√2","10/√2 = 5√2","Both B and C"],"ans":3,"exp":"Leg=hyp/√2=10/√2=5√2","tag":"Special Triangles"},
+  {"q":"Angle in semicircle (inscribed in semicircle) is always:","ch":["45°","60°","90°","180°"],"ans":2,"exp":"Thales' theorem: inscribed angle in semicircle = 90°","tag":"Circles"},
+  {"q":"Perimeter of equilateral triangle, side=9?","ch":["18","27","36","81"],"ans":1,"exp":"3×9=27","tag":"Triangles"},
+  {"q":"Sphere volume r=3? (π≈3.14)","ch":["113.1","37.7","75.4","28.3"],"ans":0,"exp":"(4/3)πr³=(4/3)×3.14×27≈113.1","tag":"Volume"},
+  {"q":"Slope of line through (0,5) and (4,13)?","ch":["1","2","3","4"],"ans":1,"exp":"(13−5)/(4−0)=8/4=2","tag":"Coordinate Geometry"},
+  {"q":"Complementary angles sum to:","ch":["45°","90°","180°","360°"],"ans":1,"exp":"Complementary=90°","tag":"Angles"},
+  {"q":"Triangle sides 5, 12, ?. What makes right triangle?","ch":["10","13","14","15"],"ans":1,"exp":"5²+12²=25+144=169=13²","tag":"Pythagorean Theorem"},
+  {"q":"Circle sector angle=90°, r=4. Arc length? (π≈3.14)","ch":["6.28","12.56","3.14","25.12"],"ans":0,"exp":"(90/360)×2πr=(1/4)×2×3.14×4=6.28","tag":"Circles"},
+  {"q":"Rectangle area=60, width=5. Length?","ch":["10","12","15","20"],"ans":1,"exp":"60/5=12","tag":"Rectangles"},
+  {"q":"Co-interior (same-side interior) angles are:","ch":["Congruent","Supplementary","Complementary","Equal to 90°"],"ans":1,"exp":"Same-side interior angles are supplementary (sum=180°)","tag":"Parallel Lines"},
+  {"q":"Regular hexagon, side=6. Perimeter?","ch":["24","30","36","42"],"ans":2,"exp":"6×6=36","tag":"Polygons"},
+  {"q":"Point (3,4) reflected across x-axis?","ch":["(−3,4)","(3,−4)","(−3,−4)","(4,3)"],"ans":1,"exp":"Reflecting over x-axis negates y","tag":"Coordinate Geometry"},
+  {"q":"Cone volume r=3, h=4? (π≈3.14)","ch":["37.68","75.36","113.1","12.56"],"ans":0,"exp":"(1/3)πr²h=(1/3)×3.14×9×4=37.68","tag":"Volume"},
+  {"q":"Two similar figures have ratio 1:3. Area ratio?","ch":["1:3","1:6","1:9","1:27"],"ans":2,"exp":"Area ratio = (linear ratio)² = 1:9","tag":"Similar Triangles"},
+  {"q":"Altitude to hypotenuse of right triangle creates:","ch":["Two equilateral triangles","Two similar triangles","Two isosceles triangles","Two congruent triangles"],"ans":1,"exp":"Two triangles each similar to original","tag":"Triangles"},
+  {"q":"Parallelogram base=8, height=5. Area?","ch":["20","40","26","13"],"ans":1,"exp":"A=b×h=8×5=40","tag":"Quadrilaterals"},
+  {"q":"Which set of angles cannot form a triangle?","ch":["60,60,60","90,45,45","100,50,30","80,80,30"],"ans":3,"exp":"80+80+30=190≠180","tag":"Triangles"},
+],
+
+"algebra2": [
+  {"q":"Solve: x²−5x+6=0","ch":["x=2,3","x=1,6","x=−2,−3","x=3,4"],"ans":0,"exp":"(x−2)(x−3)=0","tag":"Quadratics"},
+  {"q":"Discriminant of 2x²−4x+2=0?","ch":["0","4","8","16"],"ans":0,"exp":"16−16=0","tag":"Discriminant"},
+  {"q":"log₂(8)+log₂(4)=?","ch":["4","5","6","7"],"ans":1,"exp":"3+2=5","tag":"Logarithms"},
+  {"q":"Which is exponential growth?","ch":["f(x)=3x","f(x)=x²","f(x)=2·1.5ˣ","f(x)=−x"],"ans":2,"exp":"bˣ with b>1","tag":"Exponentials"},
+  {"q":"Vertex of y=(x−3)²+5?","ch":["(−3,5)","(3,5)","(5,3)","(3,−5)"],"ans":1,"exp":"Vertex form (h,k)","tag":"Vertex Form"},
+  {"q":"f(x)=2x+1, g(x)=x². f(g(3))=?","ch":["17","19","21","23"],"ans":1,"exp":"g(3)=9, f(9)=19","tag":"Composition"},
+  {"q":"Solve: √(2x+3)=5","ch":["x=11","x=7","x=10","x=12"],"ans":0,"exp":"2x+3=25→x=11","tag":"Radicals"},
+  {"q":"i² where i=√(−1) equals:","ch":["1","−1","i","0"],"ans":1,"exp":"Definition: i²=−1","tag":"Complex Numbers"},
+  {"q":"Inverse of f(x)=3x−6?","ch":["(x+6)/3","3x+6","(x−6)/3","x/3"],"ans":0,"exp":"Swap and solve","tag":"Inverse Functions"},
+  {"q":"Sum: 3+6+12+24+48?","ch":["83","93","99","101"],"ans":1,"exp":"Geometric sum=93","tag":"Series"},
+  {"q":"Solve: x²=49","ch":["x=7","x=±7","x=49","x=±49"],"ans":1,"exp":"x=±√49=±7","tag":"Quadratics"},
+  {"q":"Simplify: log₁₀(1000)","ch":["2","3","4","100"],"ans":1,"exp":"10³=1000 → log=3","tag":"Logarithms"},
+  {"q":"Which is a perfect square trinomial?","ch":["x²+4x+4","x²+3x+4","x²−4x−4","x²+4x−4"],"ans":0,"exp":"(x+2)²=x²+4x+4","tag":"Factoring"},
+  {"q":"Solve: 2ˣ=32","ch":["x=4","x=5","x=6","x=16"],"ans":1,"exp":"2⁵=32 → x=5","tag":"Exponentials"},
+  {"q":"Axis of symmetry of y=2x²−8x+3?","ch":["x=1","x=2","x=3","x=4"],"ans":1,"exp":"x=−b/2a=8/4=2","tag":"Quadratics"},
+  {"q":"Simplify: √48","ch":["4√3","6√2","4√6","3√4"],"ans":0,"exp":"√(16×3)=4√3","tag":"Radicals"},
+  {"q":"Solve: log₃(x)=4","ch":["x=12","x=64","x=81","x=7"],"ans":2,"exp":"3⁴=81","tag":"Logarithms"},
+  {"q":"(2+3i)+(4−i)=?","ch":["6+2i","6+4i","8+2i","6−2i"],"ans":0,"exp":"(2+4)+(3−1)i=6+2i","tag":"Complex Numbers"},
+  {"q":"nth term of arithmetic sequence 5,8,11,…?","ch":["3n+2","3n+5","2n+3","5n−3"],"ans":0,"exp":"a₁=5, d=3 → aₙ=5+(n−1)×3=3n+2","tag":"Sequences"},
+  {"q":"Product of (3+2i)(3−2i)?","ch":["5","9+4","13","9−4i²"],"ans":2,"exp":"a²+b²=9+4=13 (complex conjugates)","tag":"Complex Numbers"},
+  {"q":"Solve: x²+4x+4=0","ch":["x=−2 (double)","x=2","x=±2","x=4"],"ans":0,"exp":"(x+2)²=0 → x=−2","tag":"Quadratics"},
+  {"q":"log(x)+log(y)=?","ch":["log(x+y)","log(xy)","log(x/y)","log(x−y)"],"ans":1,"exp":"Product rule: log(x)+log(y)=log(xy)","tag":"Logarithms"},
+  {"q":"f(x)=3ˣ. What is f(−2)?","ch":["−9","1/9","9","−1/9"],"ans":1,"exp":"3⁻²=1/3²=1/9","tag":"Exponentials"},
+  {"q":"Arithmetic mean of sequence with a₁=2, a₅=18?","ch":["8","10","12","16"],"ans":1,"exp":"Mean=(2+18)/2=10","tag":"Sequences"},
+  {"q":"Simplify: (4i)²","ch":["16","−16","16i","−16i"],"ans":1,"exp":"4²×i²=16×(−1)=−16","tag":"Complex Numbers"},
+  {"q":"Which function has a vertical asymptote at x=2?","ch":["f(x)=1/(x+2)","f(x)=1/(x−2)","f(x)=2x","f(x)=x²−2"],"ans":1,"exp":"Denominator=0 at x=2","tag":"Rational Functions"},
+  {"q":"Solve: x²−x−12=0","ch":["x=3,−4","x=4,−3","x=−3,4","x=4,3"],"ans":1,"exp":"(x−4)(x+3)=0 → x=4 or x=−3","tag":"Quadratics"},
+  {"q":"What does a negative discriminant indicate?","ch":["Two real roots","One real root","No real roots","Infinite roots"],"ans":2,"exp":"b²−4ac<0 → complex/imaginary roots","tag":"Discriminant"},
+  {"q":"Simplify: ⁵√32","ch":["2","4","8","16"],"ans":0,"exp":"2⁵=32 → ⁵√32=2","tag":"Radicals"},
+  {"q":"Horizontal asymptote of f(x)=3/(x+1)?","ch":["y=3","y=0","y=1","y=−1"],"ans":1,"exp":"Degree of numerator < denominator → y=0","tag":"Rational Functions"},
+  {"q":"Sum of infinite geometric series a=8, r=1/2?","ch":["4","8","16","32"],"ans":2,"exp":"S=a/(1−r)=8/(1/2)=16","tag":"Series"},
+  {"q":"Solve: e^x = 1","ch":["x=0","x=1","x=e","x=−1"],"ans":0,"exp":"e⁰=1 → x=0","tag":"Exponentials"},
+  {"q":"Which of these is NOT a polynomial?","ch":["3x²+2","x⁻¹+2","5","4x³−x"],"ans":1,"exp":"Negative exponents disqualify from polynomial","tag":"Polynomials"},
+  {"q":"(2i)(3i)=?","ch":["6i","−6","6","−6i"],"ans":1,"exp":"2×3×i²=6×(−1)=−6","tag":"Complex Numbers"},
+  {"q":"Solve: 9ˣ=27","ch":["x=3/2","x=2/3","x=3","x=2"],"ans":0,"exp":"3²ˣ=3³ → 2x=3 → x=3/2","tag":"Exponentials"},
+  {"q":"Conjugate of 4−3i?","ch":["4+3i","−4+3i","4−3i","−4−3i"],"ans":0,"exp":"Conjugate flips sign of imaginary part","tag":"Complex Numbers"},
+  {"q":"Range of f(x)=x²+3?","ch":["y≥0","y≥3","y>3","All reals"],"ans":1,"exp":"x²≥0, so x²+3≥3","tag":"Functions"},
+  {"q":"Simplify: log₂(1)","ch":["0","1","2","Undefined"],"ans":0,"exp":"2⁰=1 → log₂(1)=0","tag":"Logarithms"},
+  {"q":"Solve: 4x²=100","ch":["x=±5","x=5","x=±25","x=25"],"ans":0,"exp":"x²=25 → x=±5","tag":"Quadratics"},
+  {"q":"Which has no real roots: ax²+bx+c=0?","ch":["a=1,b=4,c=3","a=1,b=2,c=5","a=1,b=−6,c=9","a=2,b=−3,c=1"],"ans":1,"exp":"Discriminant=4−20=−16<0","tag":"Discriminant"},
+],
+
+"english": [
+  {"q":"Misplaced modifier: 'Running quickly, the finish line was crossed.'","ch":["Correct","Misplaced modifier","Comma splice","Fragment"],"ans":1,"exp":"'Running quickly' wrongly modifies 'finish line'","tag":"Modifiers"},
+  {"q":"'A sea of faces' is a:","ch":["Simile","Personification","Metaphor","Hyperbole"],"ans":2,"exp":"Direct comparison without 'like/as'","tag":"Figurative Language"},
+  {"q":"Best word: 'Despite his ___ demeanor, he was compassionate.'","ch":["austere","jovial","timid","verbose"],"ans":0,"exp":"'Austere'=stern, contrasts with compassionate","tag":"Vocabulary"},
+  {"q":"'The team, along with their coach, ___ excited.'","ch":["were","was","are","have been"],"ans":1,"exp":"Subject 'team' is singular → 'was'","tag":"Subject-Verb Agreement"},
+  {"q":"Dramatic irony: audience knows what a character doesn't.","ch":["Simile","Dramatic irony","Situational irony","Verbal irony"],"ans":1,"exp":"Classic definition of dramatic irony","tag":"Literary Devices"},
+  {"q":"'She sells seashells by the seashore' uses:","ch":["Assonance","Alliteration","Onomatopoeia","Consonance"],"ans":1,"exp":"Repeated initial 's' = alliteration","tag":"Sound Devices"},
+  {"q":"Thesis statement purpose:","ch":["Background","Summarize conclusion","Central argument","List evidence"],"ans":2,"exp":"Thesis = main claim argued","tag":"Essay Structure"},
+  {"q":"Correctly punctuated with 'however':","ch":["I went, however I was tired.","I went; however, I was tired.","I went however, tired.","I went however I was tired."],"ans":1,"exp":"Semicolon before, comma after conjunctive adverb","tag":"Punctuation"},
+  {"q":"Tone is the author's:","ch":["Central idea","Attitude toward subject","Plot sequence","Setting"],"ans":1,"exp":"Tone = author's emotional attitude","tag":"Tone & Style"},
+  {"q":"Best transition for contrast: 'It failed. ___, they persisted.'","ch":["Therefore","Similarly","Nevertheless","Consequently"],"ans":2,"exp":"'Nevertheless' shows contrast","tag":"Transitions"},
+  {"q":"Which is a sentence fragment?","ch":["She ran.","Because it rained.","He left early.","They arrived."],"ans":1,"exp":"Subordinate clause alone = fragment","tag":"Sentence Structure"},
+  {"q":"'The moon was a silver coin' uses:","ch":["Simile","Metaphor","Alliteration","Personification"],"ans":1,"exp":"Direct comparison = metaphor","tag":"Figurative Language"},
+  {"q":"Passive voice: 'The cake was eaten by him.' Active voice?","ch":["He ate the cake.","The cake ate him.","He has eaten cake.","Cake was eaten."],"ans":0,"exp":"Subject performs action: 'He ate the cake.'","tag":"Voice"},
+  {"q":"'The thunder roared angrily.' This is:","ch":["Simile","Hyperbole","Personification","Alliteration"],"ans":2,"exp":"Human attribute ('angrily') given to thunder","tag":"Figurative Language"},
+  {"q":"Choose the correct sentence:","ch":["Me and him went.","He and I went.","Him and I went.","Me and he went."],"ans":1,"exp":"Subject pronouns: He and I","tag":"Pronouns"},
+  {"q":"'The longest journey begins with a single step.' This is a:","ch":["Simile","Metaphor","Aphorism","Hyperbole"],"ans":2,"exp":"Aphorism = short wise statement of general truth","tag":"Literary Devices"},
+  {"q":"Antonym of 'benevolent':","ch":["Kind","Generous","Malevolent","Charitable"],"ans":2,"exp":"Benevolent=kind; malevolent=evil (opposite)","tag":"Vocabulary"},
+  {"q":"Oxford comma example?","ch":["I like cats and dogs","I like cats, dogs and fish","I like cats, dogs, and fish","I like, cats dogs and fish"],"ans":2,"exp":"Oxford comma before final 'and' in a list","tag":"Punctuation"},
+  {"q":"'Like a bolt of lightning' is a:","ch":["Metaphor","Simile","Personification","Allusion"],"ans":1,"exp":"Uses 'like' = simile","tag":"Figurative Language"},
+  {"q":"'Neither the students nor the teacher ___ ready.'","ch":["were","was","are","have been"],"ans":1,"exp":"Neither/nor: verb agrees with nearest subject ('teacher')","tag":"Subject-Verb Agreement"},
+  {"q":"Which is a run-on sentence?","ch":["I ran. I fell.","I ran, and I fell.","I ran I fell.","Although I ran, I fell."],"ans":2,"exp":"Two independent clauses joined with no punctuation","tag":"Sentence Structure"},
+  {"q":"Synonym of 'ephemeral':","ch":["Eternal","Fleeting","Abundant","Vivid"],"ans":1,"exp":"Ephemeral = lasting a very short time","tag":"Vocabulary"},
+  {"q":"'He studied all night.' The word 'all night' is an:","ch":["Adjective","Adverb","Noun phrase","Conjunction"],"ans":1,"exp":"Modifies 'studied' (verb) → adverb phrase","tag":"Grammar"},
+  {"q":"Purpose of a topic sentence in a paragraph?","ch":["Concludes the paragraph","Introduces the main idea","Provides evidence","Transitions to next paragraph"],"ans":1,"exp":"Topic sentence states the paragraph's main point","tag":"Essay Structure"},
+  {"q":"'She was as brave as a lion.' This is a:","ch":["Metaphor","Simile","Alliteration","Hyperbole"],"ans":1,"exp":"Uses 'as...as' = simile","tag":"Figurative Language"},
+  {"q":"Identify the independent clause: 'Although it rained, we played.'","ch":["Although it rained","we played","Although","it rained, we played"],"ans":1,"exp":"'We played' can stand alone","tag":"Sentence Structure"},
+  {"q":"'Ambiguous' means:","ch":["Clear and obvious","Open to multiple interpretations","Completely wrong","Slightly incorrect"],"ans":1,"exp":"Ambiguous = having more than one possible meaning","tag":"Vocabulary"},
+  {"q":"An author uses 'repetition' to:","ch":["Add variety","Emphasize a point","Confuse the reader","Shorten text"],"ans":1,"exp":"Repetition stresses key ideas","tag":"Rhetorical Devices"},
+  {"q":"Correctly uses a semicolon?","ch":["I love hiking; because it's fun.","I love hiking; it clears my mind.","I love; hiking and running.","I; love hiking."],"ans":1,"exp":"Semicolons join two independent clauses","tag":"Punctuation"},
+  {"q":"Which word is a conjunction?","ch":["Quickly","Because","Beautiful","Ran"],"ans":1,"exp":"Conjunctions join clauses/phrases","tag":"Grammar"},
+  {"q":"'Hyperbole' is:","ch":["Understatement","Extreme exaggeration","Comparison using 'like'","Human qualities to non-humans"],"ans":1,"exp":"Hyperbole = deliberate extreme exaggeration","tag":"Figurative Language"},
+  {"q":"The word 'however' is a:","ch":["Preposition","Conjunction","Conjunctive adverb","Verb"],"ans":2,"exp":"Conjunctive adverbs connect independent clauses","tag":"Grammar"},
+  {"q":"Which sentence uses correct apostrophe?","ch":["The dogs bone","The dog's bone","The dogs' bones'","The dogs's bone"],"ans":1,"exp":"Singular possessive: dog's","tag":"Punctuation"},
+  {"q":"'The author's purpose' refers to:","ch":["The genre","Why the author wrote the piece","The characters' goals","The plot summary"],"ans":1,"exp":"Author's purpose = reason for writing (inform/persuade/entertain)","tag":"Reading Comprehension"},
+  {"q":"Word that means 'to make worse':","ch":["Ameliorate","Exacerbate","Mitigate","Alleviate"],"ans":1,"exp":"Exacerbate = make worse; others mean improve","tag":"Vocabulary"},
+  {"q":"Parallel structure error?","ch":["She likes running, hiking, and swimming.","She likes to run, hike, and swim.","She likes running, to hike, and swim.","She runs, hikes, and swims."],"ans":2,"exp":"Mixed forms (gerund, infinitive, base) = not parallel","tag":"Sentence Structure"},
+  {"q":"'Juxtaposition' places two ideas side by side to:","ch":["Create rhyme","Highlight contrast","Add alliteration","Define a term"],"ans":1,"exp":"Juxtaposition contrasts ideas for effect","tag":"Rhetorical Devices"},
+  {"q":"Which is an example of ethos?","ch":["Statistics show 90% agree.","As a doctor, I recommend...","Imagine your child suffering.","This is the best product ever."],"ans":1,"exp":"Ethos = credibility/authority of speaker","tag":"Rhetoric"},
+  {"q":"Meaning of 'ubiquitous':","ch":["Rare","Dangerous","Present everywhere","Unknown"],"ans":2,"exp":"Ubiquitous = found everywhere","tag":"Vocabulary"},
+  {"q":"Which sentence has correct subject-verb agreement?","ch":["Everyone are going.","The group of students are loud.","Each of the boys have a ball.","Neither option is correct."],"ans":3,"exp":"'Neither...is' — singular verb with 'neither'","tag":"Subject-Verb Agreement"},
+],
+}
+
+# ── HELPERS ───────────────────────────────────────────────────────────────────
+def draw_rect(surf, color, r, radius=0):
+    pygame.draw.rect(surf, color, r, border_radius=int(radius))
+
+def draw_rect_border(surf, color, r, radius=0, w=1):
+    pygame.draw.rect(surf, color, r, int(w), border_radius=int(radius))
+
+def draw_text(surf, text, fnt, color, x, y, anchor="topleft", max_w=None):
+    if max_w:
+        words = text.split(" ")
+        lines, cur = [], []
+        for word in words:
+            test = " ".join(cur + [word])
+            if fnt.size(test)[0] <= max_w:
+                cur.append(word)
+            else:
+                if cur: lines.append(" ".join(cur))
+                cur = [word]
+        if cur: lines.append(" ".join(cur))
+        lh = fnt.get_linesize() + 2
+        for i, line in enumerate(lines):
+            draw_text(surf, line, fnt, color, x, y + i*lh, anchor)
+        return len(lines) * lh
+    s = fnt.render(text, True, color)
+    r2 = s.get_rect(**{anchor: (x, y)})
+    surf.blit(s, r2)
+    return fnt.get_height()
+
+def pill(surf, bg_c, border_c, x, y, w, h, label, fnt, tc):
+    draw_rect(surf, bg_c, (x,y,w,h), h//2)
+    draw_rect_border(surf, border_c, (x,y,w,h), h//2, 1)
+    draw_text(surf, label, fnt, tc, x+w//2, y+h//2, "center")
+
+def pbar(surf, x, y, w, h, pct, bg=BORDER, fg=ACCENT, radius=4):
+    draw_rect(surf, bg, (x,y,w,h), radius)
+    if pct > 0:
+        fw = max(int(radius)*2, int(w*pct))
+        draw_rect(surf, fg, (x,y,fw,h), radius)
+
+def lerp(a, b, t):
+    return a + (b-a)*t
+
+def clamp(v,lo,hi):
+    return max(lo,min(hi,v))
+
+# ── SCROLL ────────────────────────────────────────────────────────────────────
+class Scroll:
+    def __init__(self):
+        self.y = 0.0          # current scroll position (pixels)
+        self.target = 0.0     # smooth scroll target
+        self.content_h = 0
+
+    def reset(self):
+        self.y = 0.0; self.target = 0.0
+
+    def scroll(self, dy, view_h):
+        max_s = max(0, self.content_h - view_h)
+        self.target = clamp(self.target - dy*36, 0, max_s)
+
+    def update(self):
+        self.y = lerp(self.y, self.target, 0.18)
+
+    def draw_bar(self, screen, view_x, view_y, view_w, view_h):
+        if self.content_h <= view_h: return
+        track_h = view_h - 8
+        sb_h  = max(32, int(track_h * view_h / self.content_h))
+        ratio = self.y / max(1, self.content_h - view_h)
+        sb_y  = 4 + int(ratio * (track_h - sb_h))
+        # track
+        draw_rect(screen, (30,36,48), (view_x+view_w-8, view_y+4, 5, track_h), 3)
+        # thumb
+        draw_rect(screen, SCROLLBAR, (view_x+view_w-8, view_y+sb_y, 5, sb_h), 3)
+
+# ── PARTICLES ──────────────────────────────────────────────────────────────────
+class Particle:
+    def __init__(self, x, y, color):
+        self.x=float(x); self.y=float(y)
+        self.vx=random.uniform(-5,5); self.vy=random.uniform(-10,-2)
+        self.color=color; self.life=1.0; self.r=random.randint(3,8)
+    def update(self):
+        self.x+=self.vx; self.y+=self.vy; self.vy+=0.3
+        self.life-=0.03; return self.life>0
+    def draw(self, surf):
+        a=int(self.life*255)
+        s=pygame.Surface((self.r*2,self.r*2),pygame.SRCALPHA)
+        pygame.draw.circle(s,(*self.color,a),(self.r,self.r),self.r)
+        surf.blit(s,(int(self.x)-self.r,int(self.y)-self.r))
+
+particles: list = []
+def burst(x, y, color, n=22):
+    for _ in range(n): particles.append(Particle(x,y,color))
+
+# ── ANIMATED COUNTERS ─────────────────────────────────────────────────────────
+class Counter:
+    def __init__(self): self.display=0.0; self.target=0
+    def set(self, v): self.target=v
+    def update(self): self.display=lerp(self.display,self.target,0.12)
+    def val(self): return int(self.display)
+
+# ── STATE ─────────────────────────────────────────────────────────────────────
+class App:
+    def __init__(self):
+        self.screen   = "home"
+        self.topic    = None
+        self.qs       = []
+        self.qi       = 0
+        self.sel      = None
+        self.revealed = False
+        self.hint_used= False
+        self.hint_elim= None
+        self.score    = 0
+        self.total    = 0
+        self.history  = []
+        self.streak   = 0
+        self.best_str = 0
+        self.t0       = time.time()
+        self.slide    = 0.0
+        self.flash_ok = 0.0
+        self.flash_no = 0.0
+        self.topic_stats = {k:{"c":0,"t":0} for k in QUESTIONS}
+        self.scroll   = Scroll()
+        self.hover    = None
+        # Dashboard animations
+        self.dash_anim   = 0.0   # 0→1 on enter
+        self.card_hover_t= {k:0.0 for k in QUESTIONS}  # per-card hover glow
+        self.counters    = {
+            "answered": Counter(),
+            "correct":  Counter(),
+            "streak":   Counter(),
+            "accuracy": Counter(),
+        }
+        # Pulse animation t
+        self.pulse_t = 0.0
+
+    def go(self, s, **kw):
+        prev = self.screen
+        self.screen = s
+        self.scroll.reset()
+        for k,v in kw.items(): setattr(self,k,v)
+        if s=="home": self.dash_anim=0.0
+
+    def start_quiz(self, key, n):
+        pool = QUESTIONS[key][:]
+        random.shuffle(pool)
+        self.qs = pool[:n]
+        self._reset_quiz(key)
+
+    def start_mixed(self, n):
+        pool=[]
+        for k,qs in QUESTIONS.items():
+            s=qs[:]; random.shuffle(s)
+            pool+=[{"_t":k,**q} for q in s[:max(1,n//4)]]
+        random.shuffle(pool); self.qs=pool[:n]
+        self._reset_quiz("mixed")
+
+    def _reset_quiz(self, key):
+        self.topic=key; self.qi=0; self.sel=None
+        self.revealed=False; self.hint_used=False; self.hint_elim=None
+        self.score=0; self.total=0; self.history=[]
+        self.streak=0; self.t0=time.time(); self.slide=1.0
+        self.go("quiz")
+
+    def submit(self):
+        if self.sel is None or self.revealed: return
+        self.revealed=True
+        q=self.qs[self.qi]; t=q.get("_t",self.topic)
+        ok=self.sel==q["ans"]
+        self.total+=1; self.topic_stats[t]["t"]+=1
+        self.history.append((t,ok,q))
+        if ok:
+            self.score+=1; self.topic_stats[t]["c"]+=1
+            self.streak+=1; self.best_str=max(self.best_str,self.streak)
+            self.flash_ok=1.0
+        else:
+            self.streak=0; self.flash_no=1.0
+
+    def next_q(self):
+        self.qi+=1; self.sel=None; self.revealed=False
+        self.hint_used=False; self.hint_elim=None; self.slide=1.0
+        if self.qi>=len(self.qs): self.go("results")
+
+    def use_hint(self):
+        if self.hint_used or self.revealed: return
+        q=self.qs[self.qi]
+        wrong=[i for i in range(4) if i!=q["ans"]]
+        self.hint_elim=random.choice(wrong); self.hint_used=True
+
+    def elapsed(self):
+        s=int(time.time()-self.t0); m,s2=divmod(s,60)
+        return f"{m:02d}:{s2:02d}"
+
+    def update_anims(self):
+        self.pulse_t += 0.04
+        if self.screen=="home":
+            self.dash_anim = min(1.0, self.dash_anim+0.04)
+            for k in QUESTIONS:
+                target = 1.0 if self.hover==("card",k) else 0.0
+                self.card_hover_t[k] = lerp(self.card_hover_t[k], target, 0.15)
+        # Update counters
+        tc=sum(v["t"] for v in self.topic_stats.values())
+        cc=sum(v["c"] for v in self.topic_stats.values())
+        acc=int(cc/tc*100) if tc else 0
+        self.counters["answered"].set(tc)
+        self.counters["correct"].set(cc)
+        self.counters["streak"].set(self.best_str)
+        self.counters["accuracy"].set(acc)
+        for c in self.counters.values(): c.update()
+        self.scroll.update()
+
+# ── SIDEBAR ────────────────────────────────────────────────────────────────────
+def draw_sidebar(app, W, H):
+    draw_rect(screen, SIDE_BG, (0,0,SIDEBAR_W,H))
+    pygame.draw.line(screen, BORDER, (SIDEBAR_W,0),(SIDEBAR_W,H),1)
+    # Logo
+    draw_rect(screen, BG, (0,0,SIDEBAR_W,58))
+    pygame.draw.line(screen, BORDER,(0,58),(SIDEBAR_W,58),1)
+    draw_text(screen,"SAT",Fh1,ACCENT,16,16)
+    draw_text(screen,"Prep Pro",Fb2,TEXT2,62,22)
+
+    nav=[("home","⌂","Dashboard"),("algebra1","∑","Algebra I"),
+         ("geometry","△","Geometry"),("algebra2","∫","Algebra II"),("english","✎","English")]
+    y=70
+    for key,icon,label in nav:
+        active=(app.screen==key) or (app.screen in("topic","quiz","results") and app.topic==key)
+        hov=app.hover==("nav",key)
+        bg2=CARD_HOV if (active or hov) else SIDE_BG
+        draw_rect(screen,bg2,(4,y,SIDEBAR_W-8,42),8)
+        if active: draw_rect(screen,ACCENT,(4,y+9,3,24),2)
+        ci=ACCENT if active else (TEXT2 if hov else TEXT3)
+        cl=TEXT1 if active else TEXT2
+        draw_text(screen,icon,Fh3,ci,24,y+14)
+        draw_text(screen,label,Fb2,cl,46,y+15)
+        if key in app.topic_stats:
+            ts=app.topic_stats[key]
+            if ts["t"]>0:
+                p=ts["c"]/ts["t"]
+                c2=GREEN_C if p>=0.7 else(YELLOW if p>=0.5 else RED_C)
+                draw_text(screen,f"{p*100:.0f}%",Fxs,c2,SIDEBAR_W-10,y+16,"topright")
+        y+=50
+
+    # Mixed button
+    y+=6; hov_m=app.hover==("nav","mixed")
+    draw_rect(screen,PURPLE_BG if hov_m else (30,20,56),(4,y,SIDEBAR_W-8,42),8)
+    draw_rect_border(screen,PURPLE,(4,y,SIDEBAR_W-8,42),8,1)
+    draw_text(screen,"⚡ Mixed Practice",Fxs,PURPLE,SIDEBAR_W//2,y+15,"midtop")
+
+    # Footer
+    pygame.draw.line(screen,BORDER,(0,H-112),(SIDEBAR_W,H-112),1)
+    tc=sum(v["c"] for v in app.topic_stats.values())
+    tt=sum(v["t"] for v in app.topic_stats.values())
+    pc=tc/tt*100 if tt else 0
+    m2,s2=divmod(int(time.time()-app.t0),60)
+    draw_text(screen,"SESSION",Fxs,TEXT3,14,H-104)
+    draw_text(screen,f"{tc}/{tt} correct",Fb2,TEXT1,14,H-88)
+    pbar(screen,14,H-72,SIDEBAR_W-28,5,pc/100,fg=ACCENT)
+    draw_text(screen,f"{pc:.0f}% accuracy",Fxs,ACCENT,14,H-62)
+    draw_text(screen,f"⏱  {m2:02d}:{s2:02d}",Fxs,TEXT3,14,H-48)
+    draw_text(screen,f"🔥 Best streak: {app.best_str}",Fxs,YELLOW,14,H-32)
+
+# ── TOPBAR ─────────────────────────────────────────────────────────────────────
+def draw_topbar(app, W, H):
+    draw_rect(screen,SIDE_BG,(SIDEBAR_W,0,W-SIDEBAR_W,58))
+    pygame.draw.line(screen,BORDER,(SIDEBAR_W,58),(W,58),1)
+    if app.screen=="home":
+        draw_text(screen,"Dashboard",Fh1,TEXT1,SIDEBAR_W+22,17)
+    elif app.screen=="topic":
+        draw_text(screen,TOPIC_LABEL.get(app.topic,""),Fh1,TEXT1,SIDEBAR_W+22,17)
+    elif app.screen=="quiz":
+        q=app.qs[app.qi] if app.qs else {}
+        t=q.get("_t",app.topic)
+        lbl=f"{TOPIC_LABEL.get(t,'Quiz')}  ›  {q.get('tag','')}"
+        draw_text(screen,lbl,Fh1,TEXT1,SIDEBAR_W+22,17)
+        bw=200; done=app.qi; tot=len(app.qs)
+        pbar(screen,W-bw-56,25,bw,8,done/tot if tot else 0,
+             fg=TOPIC_COLOR.get(t,ACCENT))
+        draw_text(screen,f"{done}/{tot}",Fxs,TEXT2,W-48,22)
+    elif app.screen=="results":
+        draw_text(screen,"Results",Fh1,TEXT1,SIDEBAR_W+22,17)
+    if app.streak>=2:
+        pill(screen,YELLOW_BG,YELLOW,W-136,14,118,30,
+             f"🔥 {app.streak} streak",Fxs,YELLOW)
+
+# ── HOME SCREEN ────────────────────────────────────────────────────────────────
+def draw_home(app, W, H):
+    VX=SIDEBAR_W+14; VY=58; VW=W-VX-14; VH=H-VY
+    anim=app.dash_anim
+    # off-screen surface (tall enough for all content)
+    SURF_H=2400
+    surf=pygame.Surface((VW,SURF_H),pygame.SRCALPHA); surf.fill((0,0,0,0))
+
+    y=int(24*(anim))
+
+    # ── Hero heading with animated underline ──────────────────────────
+    draw_text(surf,"Ready to crush the SAT?",Fb,TEXT1,22,y)
+    hw=Fb.size("Ready to crush the SAT?")[0]
+    ul_w=int(hw*anim)
+    if ul_w>2:
+        pygame.draw.line(surf,ACCENT,(22,y+40),(22+ul_w,y+40),3)
+    y+=52
+    # Subtitle fade-in
+    alpha_val=int(255*min(1.0,anim*2))
+    sub=Fb2.render("Pick a section below — scroll down to see your stats.",True,TEXT2)
+    sub.set_alpha(alpha_val); surf.blit(sub,(22,y)); y+=40
+
+    # ── 2-col Topic Cards ─────────────────────────────────────────────
+    PAD=14; CW=(VW-22*2-PAD)//2; CH=192
+    slide_off=int((1.0-anim)*40)
+    for i,key in enumerate(QUESTIONS):
+        col_=i%2; row_=i//2
+        cx=22+col_*(CW+PAD); cy=y+row_*(CH+PAD)+slide_off
+        ht=app.card_hover_t[key]
+        col_t=TOPIC_COLOR[key]
+        # shadow via dark rect slightly offset
+        draw_rect(surf,(8,10,16),(cx+4,cy+6,CW,CH),16)
+        # card bg interpolated on hover
+        bg_r=int(lerp(CARD[0],CARD_HOV[0],ht))
+        bg_g=int(lerp(CARD[1],CARD_HOV[1],ht))
+        bg_b=int(lerp(CARD[2],CARD_HOV[2],ht))
+        draw_rect(surf,(bg_r,bg_g,bg_b),(cx,cy,CW,CH),14)
+        # glowing border on hover
+        bc_a=int(lerp(60,200,ht))
+        pygame.draw.rect(surf,(*col_t,bc_a),(cx,cy,CW,CH),2,border_radius=14)
+        # top accent bar
+        draw_rect(surf,col_t,(cx,cy,CW,5),14)
+        pygame.draw.rect(surf,col_t,(cx,cy+3,CW,2))
+
+        # animated icon circle glow
+        glow_r=int(28+4*math.sin(app.pulse_t+i))
+        glow_a=int(30+20*ht)
+        gcx=cx+42; gcy=cy+60
+        gs2=pygame.Surface((glow_r*2+16,glow_r*2+16),pygame.SRCALPHA)
+        pygame.draw.circle(gs2,(*col_t,glow_a),(glow_r+8,glow_r+8),glow_r+8)
+        surf.blit(gs2,(gcx-glow_r-8,gcy-glow_r-8))
+        pygame.draw.circle(surf,(*col_t,80),(gcx,gcy),26)
+        draw_text(surf,TOPIC_ICON[key],Fh1,col_t,gcx,gcy-11,"midtop")
+
+        draw_text(surf,TOPIC_LABEL[key],Fh2,TEXT1,cx+82,cy+28)
+        ts=app.topic_stats[key]; pct=ts["c"]/ts["t"] if ts["t"] else 0
+        draw_text(surf,TOPIC_DESC[key],Fxs,TEXT2,cx+82,cy+52,max_w=CW-96)
+        pbar(surf,cx+18,cy+CH-46,CW-36,7,pct,fg=col_t)
+        done_lbl=f"{ts['c']}/{ts['t']} correct  ·  {len(QUESTIONS[key])} Qs" if ts["t"] else f"Not started  ·  {len(QUESTIONS[key])} Qs"
+        draw_text(surf,done_lbl,Fxs,TEXT3,cx+18,cy+CH-32)
+        # Hover arrow
+        if ht>0.1:
+            aa=int(ht*220)
+            ar=Fh2.render("→ Practice",True,col_t); ar.set_alpha(aa)
+            surf.blit(ar,(cx+CW-ar.get_width()-14,cy+30))
+
+    rows=(len(QUESTIONS)+1)//2; y+=rows*(CH+PAD)+24
+
+    # ── Animated stat counters ────────────────────────────────────────
+    draw_text(surf,"Your Progress",Fh2,TEXT1,22,y); y+=38
+    PAD2=12; sw=(VW-44-PAD2*3)//4
+    stat_data=[
+        (app.counters["answered"].val(),"Total Answered",ACCENT,"answered"),
+        (app.counters["correct"].val(),"Total Correct",GREEN_C,"correct"),
+        (app.counters["streak"].val(),"Best Streak",YELLOW,"streak"),
+        (f"{app.counters['accuracy'].val()}%","Accuracy",PURPLE,"accuracy"),
+    ]
+    for i,(val,lbl,col_s,_) in enumerate(stat_data):
+        sx=22+i*(sw+PAD2); sy=y
+        # card with subtle glow
+        draw_rect(surf,(8,10,16),(sx+3,sy+4,sw,90),14)
+        draw_rect(surf,CARD,(sx,sy,sw,90),12)
+        draw_rect_border(surf,col_s,(sx,sy,sw,90),12,1)
+        # animated fill bar at bottom
+        draw_rect(surf,(*col_s,30),(sx,sy+80,sw,10),12)
+        draw_text(surf,str(val),Fnu,col_s,sx+sw//2,sy+12,"midtop")
+        draw_text(surf,lbl,Fxs,TEXT3,sx+sw//2,sy+58,"midtop")
+    y+=106
+
+    # ── Animated per-topic mini progress bars ─────────────────────────
+    draw_text(surf,"Topic Overview",Fh2,TEXT1,22,y); y+=36
+    for key in QUESTIONS:
+        col_t=TOPIC_COLOR[key]; ts=app.topic_stats[key]
+        pct=ts["c"]/ts["t"] if ts["t"] else 0
+        draw_rect(surf,CARD,(22,y,VW-44,52),10)
+        draw_rect_border(surf,BORDER,(22,y,VW-44,52),10,1)
+        draw_text(surf,TOPIC_ICON[key],Fh2,col_t,44,y+14)
+        draw_text(surf,TOPIC_LABEL[key],Fh3,TEXT1,68,y+8)
+        done_str=f"{ts['c']}/{ts['t']} correct" if ts["t"] else "Not started"
+        draw_text(surf,done_str,Fxs,TEXT3,68,y+28)
+        pbar(surf,VW-254,y+22,210,8,pct,fg=col_t)
+        col_p=GREEN_C if pct>=0.7 else(YELLOW if pct>=0.5 else(RED_C if pct>0 else TEXT3))
+        pct_lbl=f"{pct*100:.0f}%" if ts["t"] else "—"
+        draw_text(surf,pct_lbl,Fxs,col_p,VW-30,y+18,"topright")
+        y+=62
+
+    y+=8
+    # ── Mixed Practice CTA with glow pulse ───────────────────────────
+    hov_m=app.hover==("mixed_cta",None)
+    glow=int(20+10*math.sin(app.pulse_t*2))
+    draw_rect(surf,(glow,10,glow+30) if not hov_m else (50,30,90),(22,y,VW-44,84),16)
+    draw_rect_border(surf,PURPLE,(22,y,VW-44,84),16,2)
+    draw_text(surf,"⚡  Mixed Practice — All Subjects",Fh2,PURPLE,VW//2,y+14,"midtop")
+    draw_text(surf,"Randomized questions from Algebra I, Geometry, Algebra II & English",Fsm,TEXT2,VW//2,y+48,"midtop")
+    y+=100
+
+    app.scroll.content_h=y+30
+    sy=int(app.scroll.y)
+    visible=pygame.Rect(0,sy,VW,VH)
+    screen.blit(surf,(VX,VY),visible)
+    app.scroll.draw_bar(screen,VX,VY,VW,VH)
+
+# ── TOPIC SCREEN ───────────────────────────────────────────────────────────────
+def draw_topic(app, W, H):
+    key=app.topic; col_t=TOPIC_COLOR[key]
+    VX=SIDEBAR_W+14; VY=58; VW=W-VX-14; VH=H-VY
+    SURF_H=max(3000, 180+34+3*56+20+40+len(QUESTIONS[key])*74+60)
+    surf=pygame.Surface((VW,SURF_H),pygame.SRCALPHA); surf.fill((0,0,0,0))
+    y=20
+
+    draw_rect(surf,CARD,(0,y,VW-10,124),14)
+    draw_rect(surf,col_t,(0,y,VW-10,5),14)
+    pygame.draw.rect(surf,col_t,(0,y+3,VW-10,2))
+    pygame.draw.circle(surf,(*col_t,50),(46,y+64),32)
+    draw_text(surf,TOPIC_ICON[key],Fb,col_t,46,y+40,"midtop")
+    draw_text(surf,TOPIC_LABEL[key],Fh1,TEXT1,88,y+20)
+    draw_text(surf,TOPIC_DESC[key],Fb2,TEXT2,88,y+52,max_w=VW-210)
+    ts=app.topic_stats[key]; pct=ts["c"]/ts["t"] if ts["t"] else 0
+    pbar(surf,88,y+94,VW-210,8,pct,fg=col_t)
+    draw_text(surf,f"{pct*100:.0f}%",Fxs,col_t,VW-18,y+90,"topright")
+    y+=140
+
+    draw_text(surf,"Start Practice",Fh2,TEXT1,0,y); y+=34
+    btns=[("5 Questions","q5"),("10 Questions","q10"),
+          ("20 Questions","q20"),("All 40 Questions","q40")]
+    for lbl,bk in btns:
+        hov=app.hover==("tbtn",bk)
+        bg3=col_t if hov else CARD
+        tc2=BG if hov else TEXT1
+        draw_rect(surf,bg3,(0,y,210,44),10)
+        draw_rect_border(surf,col_t,(0,y,210,44),10,1)
+        draw_text(surf,lbl,Fh3,tc2,105,y+14,"midtop"); y+=56
+    y+=10
+
+    draw_text(surf,"All Questions",Fh2,TEXT1,0,y); y+=34
+    for i,q in enumerate(QUESTIONS[key]):
+        hov=app.hover==("qprev",i)
+        draw_rect(surf,CARD_HOV if hov else CARD,(0,y,VW-10,64),10)
+        draw_rect_border(surf,BORDER,(0,y,VW-10,64),10,1)
+        draw_rect(surf,(*col_t,45),(10,y+16,30,30),8)
+        draw_text(surf,str(i+1),Fh3,col_t,25,y+22,"midtop")
+        pill(surf,CARD,col_t,VW-138,y+20,120,24,q["tag"],Fxs,col_t)
+        prev=q["q"].replace("\n"," ")
+        if len(prev)>72: prev=prev[:70]+"…"
+        draw_text(surf,prev,Fsm,TEXT2,50,y+24); y+=74
+
+    app.scroll.content_h=y+30
+    visible=pygame.Rect(0,int(app.scroll.y),VW,VH)
+    screen.blit(surf,(VX,VY),visible)
+    app.scroll.draw_bar(screen,VX,VY,VW,VH)
+
+# ── QUIZ SCREEN ────────────────────────────────────────────────────────────────
+def draw_quiz(app, W, H):
+    if not app.qs: return
+    q=app.qs[app.qi]; t=q.get("_t",app.topic)
+    col_t=TOPIC_COLOR.get(t,ACCENT)
+    ox=int(app.slide*(W//3))
+    if app.slide>0: app.slide=max(0.0,app.slide-0.09)
+    CX=SIDEBAR_W+22+ox; QW=W-SIDEBAR_W-44; y=70
+
+    # ── Question card ─────────────────────────────────────────────────
+    QH=max(110,60+len(textwrap.wrap(q["q"],max(20,int(QW*0.9/7))))*24)
+    draw_rect(screen,(6,8,14),(CX+4,y+6,QW,QH),16)
+    draw_rect(screen,CARD,(CX,y,QW,QH),14)
+    draw_rect_border(screen,BORDER,(CX,y,QW,QH),14,1)
+    draw_rect(screen,col_t,(CX,y,QW,4),14)
+    pygame.draw.rect(screen,col_t,(CX,y+3,QW,1))
+    draw_text(screen,f"Q {app.qi+1} / {len(app.qs)}",Fxs,TEXT3,CX+16,y+14)
+    pill(screen,(*col_t,30),col_t,CX+QW-136,y+10,122,24,q.get("tag",""),Fxs,col_t)
+    ty=y+38
+    for line in q["q"].split("\n"):
+        wls=textwrap.wrap(line,max(20,int(QW*0.9/7))) or [""]
+        for wl in wls: draw_text(screen,wl,Fh3,TEXT1,CX+16,ty); ty+=22
+    ty=max(ty,y+QH-4); y=ty+12
+
+    # ── Choices ───────────────────────────────────────────────────────
+    labels=["A","B","C","D"]; CH2=52
+    for i,choice in enumerate(q["ch"]):
+        hov=app.hover==("choice",i)
+        elim=app.hint_elim==i; sel=app.sel==i; ans=q["ans"]
+        if app.revealed:
+            if i==ans:           bg2,bc,tc=GREEN_BG,GREEN_C,GREEN_C
+            elif sel and i!=ans: bg2,bc,tc=RED_BG,RED_C,RED_C
+            else:                bg2,bc,tc=CARD,BORDER,TEXT3
+        elif elim:               bg2,bc,tc=BG,BORDER,TEXT3
+        elif sel:                bg2,bc,tc=CARD_HOV,col_t,col_t
+        elif hov:                bg2,bc,tc=CARD_HOV,BORDER_LT,TEXT1
+        else:                    bg2,bc,tc=CARD,BORDER,TEXT1
+        draw_rect(screen,bg2,(CX,y,QW,CH2),10)
+        draw_rect_border(screen,bc,(CX,y,QW,CH2),10,1)
+        pygame.draw.circle(screen,bc,(CX+26,y+CH2//2),13)
+        draw_text(screen,labels[i],Fxs,bg2 if not elim else TEXT3,CX+26,y+CH2//2,"center")
+        if elim:
+            draw_text(screen,choice,Fb2,TEXT3,CX+48,y+15)
+            tw=Fb2.size(choice)[0]
+            pygame.draw.line(screen,TEXT3,(CX+48,y+24),(CX+48+min(tw,QW-60),y+24),1)
+        else:
+            draw_text(screen,choice,Fb2,tc,CX+48,y+15)
+        if app.revealed:
+            if i==ans:           draw_text(screen,"✓",Fh3,GREEN_C,CX+QW-18,y+14,"topright")
+            elif sel and i!=ans: draw_text(screen,"✗",Fh3,RED_C,CX+QW-18,y+14,"topright")
+        y+=CH2+8
+
+    # ── Explanation ───────────────────────────────────────────────────
+    if app.revealed:
+        exp=q.get("exp",""); ok2=app.sel==q["ans"]
+        bg_e=GREEN_BG if ok2 else RED_BG; bc_e=GREEN_C if ok2 else RED_C
+        wls=textwrap.wrap(exp,max(20,int(QW*0.9/7.5)))
+        EH=14+len(wls)*22+14; y+=6
+        draw_rect(screen,bg_e,(CX,y,QW,EH),10)
+        draw_rect_border(screen,bc_e,(CX,y,QW,EH),10,1)
+        draw_text(screen,"Explanation",Fh3,bc_e,CX+14,y+8)
+        for j,wl in enumerate(wls): draw_text(screen,wl,Fb2,TEXT1,CX+14,y+28+j*22)
+        y+=EH+10
+
+    # ── Buttons ───────────────────────────────────────────────────────
+    y+=6
+    if not app.revealed:
+        hh=app.hover==("btn","hint")
+        draw_rect(screen,YELLOW_BG if(hh or app.hint_used)else CARD,(CX,y,180,44),10)
+        draw_rect_border(screen,YELLOW,(CX,y,180,44),10,1)
+        draw_text(screen,"Hint Used" if app.hint_used else "💡 Use Hint",Fh3,YELLOW,CX+90,y+14,"midtop")
+        can=app.sel is not None; hs=app.hover==("btn","submit")
+        sb=col_t if can else CARD
+        draw_rect(screen,sb,(CX+QW-218,y,218,44),10)
+        if not can: draw_rect_border(screen,BORDER,(CX+QW-218,y,218,44),10,1)
+        draw_text(screen,"Submit Answer →",Fh3,BG if can else TEXT3,CX+QW-109,y+14,"midtop")
+    else:
+        is_last=app.qi>=len(app.qs)-1
+        lbl2="View Results →" if is_last else "Next Question →"
+        hn=app.hover==("btn","next")
+        draw_rect(screen,col_t if hn else CARD_HOV,(CX+QW-238,y,238,44),10)
+        draw_text(screen,lbl2,Fh3,BG if hn else TEXT1,CX+QW-119,y+14,"midtop")
+
+    # ── Flash overlays ────────────────────────────────────────────────
+    for attr,col2 in [("flash_ok",GREEN_C),("flash_no",RED_C)]:
+        val=getattr(app,attr)
+        if val>0:
+            fl=pygame.Surface((W,H),pygame.SRCALPHA)
+            fl.fill((*col2,int(val*65))); screen.blit(fl,(0,0))
+            setattr(app,attr,max(0.0,val-0.07))
+
+# ── RESULTS SCREEN ─────────────────────────────────────────────────────────────
+def draw_results(app, W, H):
+    VX=SIDEBAR_W+14; VY=58; VW=W-VX-14; VH=H-VY
+    SURF_H=max(3000,400+len(set(t for t,_,_ in app.history))*70+len(app.history)*64+120)
+    surf=pygame.Surface((VW,SURF_H),pygame.SRCALPHA); surf.fill((0,0,0,0))
+    y=24
+
+    total=app.total; correct=app.score
+    pct=correct/total*100 if total else 0
+    m2,s2=divmod(int(time.time()-app.t0),60)
+    grade,gcol,gmsg=(("Excellent",GREEN_C,"You're crushing it! Keep it up. 🎓")
+                     if pct>=80 else
+                     ("Good",YELLOW,"Solid effort — keep grinding! 📚")
+                     if pct>=60 else
+                     ("Keep Going",RED_C,"Don't give up — consistency wins. 💪"))
+
+    # Score circle
+    cx2=VW//2; cy2=96; r2=76
+    pygame.draw.circle(surf,(20,26,36),(cx2,cy2),r2)
+    pygame.draw.circle(surf,gcol,(cx2,cy2),r2,4)
+    draw_text(surf,f"{pct:.0f}%",Fnu,gcol,cx2,cy2-18,"center")
+    draw_text(surf,grade,Fh3,gcol,cx2,cy2+22,"center")
+    y=196; draw_text(surf,gmsg,Fh3,TEXT2,VW//2,y,"midtop"); y+=46
+
+    PAD2=12; sw=(VW-44-PAD2*3)//4
+    stats=[(f"{correct}/{total}","Correct",GREEN_C),
+           (f"{pct:.0f}%","Accuracy",gcol),
+           (f"{m2:02d}:{s2:02d}","Time",ACCENT),
+           (str(app.best_str),"Best Streak",YELLOW)]
+    for i,(val,lbl,col_s) in enumerate(stats):
+        sx=22+i*(sw+PAD2)
+        draw_rect(surf,CARD,(sx,y,sw,86),12)
+        draw_rect_border(surf,BORDER,(sx,y,sw,86),12,1)
+        draw_text(surf,val,Fmd,col_s,sx+sw//2,y+10,"midtop")
+        draw_text(surf,lbl,Fxs,TEXT3,sx+sw//2,y+52,"midtop")
+    y+=104
+
+    draw_text(surf,"Topic Breakdown",Fh2,TEXT1,22,y); y+=34
+    topic_res={}
+    for t2,ok3,_ in app.history:
+        if t2 not in topic_res: topic_res[t2]=[0,0]
+        topic_res[t2][1]+=1
+        if ok3: topic_res[t2][0]+=1
+    for t2,(tc3,tt3) in topic_res.items():
+        col_t2=TOPIC_COLOR.get(t2,ACCENT); tp=tc3/tt3 if tt3 else 0
+        draw_rect(surf,CARD,(22,y,VW-44,58),10)
+        draw_rect_border(surf,BORDER,(22,y,VW-44,58),10,1)
+        draw_text(surf,TOPIC_ICON.get(t2,"?"),Fh2,col_t2,44,y+14)
+        draw_text(surf,TOPIC_LABEL.get(t2,t2),Fh3,TEXT1,70,y+8)
+        draw_text(surf,f"{tc3}/{tt3} correct",Fxs,TEXT3,70,y+30)
+        pbar(surf,VW-278,y+24,220,8,tp,fg=col_t2)
+        cp=GREEN_C if tp>=0.7 else(YELLOW if tp>=0.5 else RED_C)
+        draw_text(surf,f"{tp*100:.0f}%",Fxs,cp,VW-44,y+20); y+=68
+
+    y+=8; draw_text(surf,"Question Review",Fh2,TEXT1,22,y); y+=34
+    for i,(t2,ok3,q3) in enumerate(app.history):
+        bg3=GREEN_BG if ok3 else RED_BG; bc3=GREEN_C if ok3 else RED_C
+        col_t2=TOPIC_COLOR.get(t2,ACCENT)
+        draw_rect(surf,bg3,(22,y,VW-44,56),10)
+        draw_rect_border(surf,bc3,(22,y,VW-44,56),10,1)
+        draw_text(surf,"✓" if ok3 else "✗",Fh2,bc3,46,y+12)
+        prev=q3["q"].replace("\n"," ")
+        if len(prev)>66: prev=prev[:64]+"…"
+        draw_text(surf,f"Q{i+1}: {prev}",Fsm,TEXT1,70,y+8)
+        draw_text(surf,q3.get("tag",""),Fxs,col_t2,70,y+30); y+=64
+
+    y+=18
+    hov_pa=app.hover==("btn","play_again")
+    draw_rect(surf,ACCENT if hov_pa else CARD,(22,y,VW-44,56),12)
+    draw_rect_border(surf,ACCENT,(22,y,VW-44,56),12,1)
+    draw_text(surf,"↩  Practice Again",Fh2,BG if hov_pa else ACCENT,VW//2,y+14,"midtop")
+    y+=74
+
+    app.scroll.content_h=y+20
+    visible=pygame.Rect(0,int(app.scroll.y),VW,VH)
+    screen.blit(surf,(VX,VY),visible)
+    app.scroll.draw_bar(screen,VX,VY,VW,VH)
+
+# ── HIT TEST ──────────────────────────────────────────────────────────────────
+def hit_test(app, mx, my, W, H):
+    # Sidebar
+    nav_keys=["home","algebra1","geometry","algebra2","english"]
+    for i,key in enumerate(nav_keys):
+        ry=70+i*50
+        if 4<=mx<=SIDEBAR_W-4 and ry<=my<=ry+42: return ("nav",key)
+    mix_y=70+len(nav_keys)*50+6
+    if 4<=mx<=SIDEBAR_W-4 and mix_y<=my<=mix_y+42: return ("nav","mixed")
+    if mx<SIDEBAR_W: return None
+
+    VX=SIDEBAR_W+14; VW=W-VX-14; VH=H-58
+    lx=mx-VX; ly=my-58+int(app.scroll.y)
+
+    if app.screen=="home":
+        PAD=14; CW=(VW-44-PAD)//2; CH=192
+        row_y=24+52+40
+        for i,key in enumerate(QUESTIONS):
+            col_=i%2; row_=i//2
+            cx=22+col_*(CW+PAD); cy=row_y+row_*(CH+PAD)
+            if cx<=lx<=cx+CW and cy<=ly<=cy+CH: return ("card",key)
+        rows=(len(QUESTIONS)+1)//2
+        y_mix=row_y+rows*(CH+PAD)+24+38+106+36+len(QUESTIONS)*62+8
+        # mixed CTA: simpler estimate
+        y_mix_est=row_y+rows*(CH+PAD)+24+38+106+36+4*62+8
+        if 22<=lx<=VW-22 and y_mix_est<=ly<=y_mix_est+84: return ("mixed_cta",None)
+
+    elif app.screen=="topic":
+        y0=20+140+34
+        btns=[("q5",0),("q10",1),("q20",2),("q40",3)]
+        for bk,j in btns:
+            if 0<=lx<=210 and y0+j*56<=ly<=y0+j*56+44: return ("tbtn",bk)
+
+    elif app.screen=="quiz" and app.qs:
+        q=app.qs[app.qi]; CX2=SIDEBAR_W+22; QW=W-SIDEBAR_W-44
+        lines=[]
+        for line in q["q"].split("\n"):
+            lines+=textwrap.wrap(line,max(20,int(QW*0.9/7))) or [""]
+        QH=max(110,60+len(lines)*24)
+        base_y=70+QH+12; CH2=52
+        for i in range(4):
+            ay=base_y+i*(CH2+8)
+            if CX2<=mx<=CX2+QW and ay<=my<=ay+CH2: return ("choice",i)
+        after=base_y+4*(CH2+8)
+        if app.revealed:
+            exp=q.get("exp","")
+            wls=textwrap.wrap(exp,max(20,int(QW*0.9/7.5)))
+            after+=6+14+len(wls)*22+14+10
+        by=after+6
+        if not app.revealed:
+            if CX2<=mx<=CX2+180 and by<=my<=by+44: return ("btn","hint")
+            if CX2+QW-218<=mx<=CX2+QW and by<=my<=by+44: return ("btn","submit")
+        else:
+            if CX2+QW-238<=mx<=CX2+QW and by<=my<=by+44: return ("btn","next")
+
+    elif app.screen=="results":
+        topic_set=len(set(t for t,_,_ in app.history))
+        y_pa_est=196+46+104+34+topic_set*68+8+34+len(app.history)*64+18
+        if 22<=lx<=VW-22 and y_pa_est<=ly<=y_pa_est+56: return ("btn","play_again")
+
+    return None
+
+# ── MAIN ──────────────────────────────────────────────────────────────────────
+def main():
+    global screen, particles
+    app=App()
+    running=True
+    while running:
+        W,H=screen.get_size()
+        clock.tick(60)
+        mx,my=pygame.mouse.get_pos()
+        app.hover=hit_test(app,mx,my,W,H)
+        app.update_anims()
+
+        for ev in pygame.event.get():
+            if ev.type==pygame.QUIT: running=False; break
+            if ev.type==pygame.VIDEORESIZE:
+                screen=pygame.display.set_mode((ev.w,ev.h),pygame.RESIZABLE)
+            if ev.type==pygame.MOUSEWHEEL and app.screen!="quiz":
+                app.scroll.scroll(ev.y,H-58)
+            if ev.type==pygame.MOUSEBUTTONDOWN and ev.button==1:
+                h=app.hover
+                if not h: continue
+                k,v=h
+                if k=="nav":
+                    if v=="mixed": app.start_mixed(10)
+                    elif v=="home": app.go("home")
+                    else: app.go("topic",topic=v)
+                elif k=="card": app.go("topic",topic=v)
+                elif k=="mixed_cta": app.start_mixed(10)
+                elif k=="tbtn":
+                    n_map={"q5":5,"q10":10,"q20":20,"q40":40}
+                    app.start_quiz(app.topic,n_map[v])
+                elif k=="choice":
+                    if not app.revealed: app.sel=v
+                elif k=="btn":
+                    if v=="submit": app.submit()
+                    elif v=="next":
+                        was_ok=app.history[-1][1] if app.history else False
+                        app.next_q()
+                        if app.screen=="quiz":
+                            burst(W//2,H//2,GREEN_C if was_ok else RED_C)
+                    elif v=="hint": app.use_hint()
+                    elif v=="play_again": app.go("home")
+
+        # ── RENDER ────────────────────────────────────────────────────
+        screen.fill(BG)
+        # grid
+        gs=pygame.Surface((W,H),pygame.SRCALPHA)
+        for gx in range(SIDEBAR_W,W,60):
+            pygame.draw.line(gs,(255,255,255,4),(gx,58),(gx,H))
+        for gy in range(58,H,60):
+            pygame.draw.line(gs,(255,255,255,4),(SIDEBAR_W,gy),(W,gy))
+        screen.blit(gs,(0,0))
+
+        draw_sidebar(app,W,H)
+        draw_topbar(app,W,H)
+
+        if   app.screen=="home":    draw_home(app,W,H)
+        elif app.screen=="topic":   draw_topic(app,W,H)
+        elif app.screen=="quiz":    draw_quiz(app,W,H)
+        elif app.screen=="results": draw_results(app,W,H)
+
+        # clip sidebar/topbar overlap
+        draw_rect(screen,SIDE_BG,(0,0,SIDEBAR_W,H))
+        pygame.draw.line(screen,BORDER,(SIDEBAR_W,0),(SIDEBAR_W,H),1)
+        draw_sidebar(app,W,H)
+        draw_rect(screen,SIDE_BG,(0,0,W,58))
+        pygame.draw.line(screen,BORDER,(0,58),(W,58),1)
+        draw_topbar(app,W,H)
+
+        # particles
+        particles=[p for p in particles if p.update()]
+        for p in particles: p.draw(screen)
+
+        pygame.mouse.set_cursor(
+            pygame.SYSTEM_CURSOR_HAND if app.hover else pygame.SYSTEM_CURSOR_ARROW)
+        pygame.display.flip()
+
+    pygame.quit(); sys.exit()
+
+if __name__=="__main__":
+    main()
